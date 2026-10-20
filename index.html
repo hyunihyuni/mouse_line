@@ -24,6 +24,7 @@
   --bg:#14211A; --panel:#1C2C23; --ink:#E4F0E7; --soft:#9DB8A7;
   --leaf:#4CC48C; --leaf-ink:#0E1A13; --acorn:#F2B04D; --bad:#F06A5F;
   --grass:#24402F; --road:#6B5E3E; --road-edge:#8C7C52; --line:#2D4537; --forest:#2A4A35; color-scheme:dark}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -96,7 +97,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body>
+<body style="margin:0">
 
 
 <div class="wrap">
