@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>다람쥐 숲길 대모험</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* 레이아웃: 위쪽 큰 탭 3개 → 아래 한 화면 놀이판. 숲속 산책길 느낌, 버튼과 목표물은 크게 */
+:root{
+  --bg:#EAF3EC; --panel:#FFFFFF; --ink:#1E3A2C; --soft:#5C7A69;
+  --leaf:#2E9A68; --leaf-ink:#FFFFFF; --acorn:#E79A2E; --bad:#D9483F;
+  --grass:#CFE6C9; --road:#E8D9B0; --road-edge:#C8B37E; --line:#D4E3D7; --forest:#BFDDB8;
+  --display:"Jua","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  --body:"Gowun Dodum","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14211A; --panel:#1C2C23; --ink:#E4F0E7; --soft:#9DB8A7;
+  --leaf:#4CC48C; --leaf-ink:#0E1A13; --acorn:#F2B04D; --bad:#F06A5F;
+  --grass:#24402F; --road:#6B5E3E; --road-edge:#8C7C52; --line:#2D4537; --forest:#2A4A35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14211A; --panel:#1C2C23; --ink:#E4F0E7; --soft:#9DB8A7;
+  --leaf:#4CC48C; --leaf-ink:#0E1A13; --acorn:#F2B04D; --bad:#F06A5F;
+  --grass:#24402F; --road:#6B5E3E; --road-edge:#8C7C52; --line:#2D4537; --forest:#2A4A35; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:14px;box-sizing:border-box;user-select:none;-webkit-user-select:none}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:400;font-size:32px;margin:0;letter-spacing:.5px}
+h1 small{display:block;font-family:var(--body);font-size:15px;color:var(--soft);letter-spacing:0}
+.tabs{display:flex;gap:10px;flex-wrap:wrap}
+.tab{font-family:var(--display);font-size:21px;border:3px solid var(--leaf);background:var(--panel);color:var(--ink);
+  border-radius:16px;padding:10px 18px;min-height:56px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--leaf);color:var(--leaf-ink)}
+.tab:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:4px solid var(--acorn);outline-offset:2px}
+.board{background:var(--panel);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;border:2px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-family:var(--display);font-size:19px;min-width:52px;min-height:48px;border-radius:14px;border:2px solid var(--line);
+  background:var(--bg);color:var(--ink);cursor:pointer;padding:0 12px}
+.chip.hard{border-color:var(--acorn);border-style:dashed}
+.chip.on{border-color:var(--acorn);border-style:solid;background:var(--acorn);color:#2A1A00}
+.chip.done::after{content:" ✔";color:var(--leaf)}
+.chip.on.done::after{color:#2A1A00}
+.btn{font-family:var(--display);font-size:20px;min-height:52px;padding:0 22px;border-radius:14px;border:0;
+  background:var(--leaf);color:var(--leaf-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.msg{font-family:var(--display);font-size:24px;min-height:36px;text-align:center;transition:color .2s}
+.msg.bad{color:var(--bad)} .msg.good{color:var(--leaf)}
+.stage{position:relative;width:100%;aspect-ratio:800/480;max-width:100%;border-radius:16px;overflow:hidden;background:var(--grass)}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer}
+#hv{cursor:grab}
+#hv.panning{cursor:grabbing}
+.stage.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:color-mix(in srgb,var(--panel) 86%,transparent);text-align:center;padding:16px}
+.overlay .big{font-family:var(--display);font-size:42px}
+.overlay p{margin:0;font-size:19px;color:var(--soft)}
+.fact{margin:0;text-align:center;font-size:18px;background:color-mix(in srgb,var(--leaf) 12%,var(--panel));border-radius:14px;padding:10px 14px;min-height:24px}
+.tip{font-size:16px;color:var(--soft);margin:0;text-align:center}
+.score{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;display:flex;gap:14px;flex-wrap:wrap}
+.score{align-items:center}
+.score .best{color:var(--acorn)}
+#soundBtn{font-size:16px;min-height:40px}
+#soundBtn[aria-pressed="false"]{opacity:.6}
+.keys{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.key{display:flex;align-items:center;gap:8px;background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-size:16px}
+.key b{font-family:var(--display);font-weight:400;font-size:18px}
+/* 분류 게임 */
+.pool{min-height:120px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-content:center;
+  background:var(--bg);border-radius:16px;padding:14px;border:2px dashed var(--line)}
+.card{width:86px;height:96px;border-radius:16px;background:var(--panel);border:3px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:grab;touch-action:none;
+  box-shadow:0 3px 0 var(--line)}
+.card .e{font-size:42px;line-height:1;font-family:var(--display)}
+.card .n{font-size:16px;font-family:var(--display)}
+.card.drag{position:fixed;z-index:50;cursor:grabbing;pointer-events:none;transform:scale(1.12) rotate(-4deg);box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.card.ghost{visibility:hidden}
+.card.back{animation:back .4s}
+@keyframes back{0%,100%{transform:none}30%{transform:translateX(-7px)}60%{transform:translateX(7px)}}
+.baskets{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.basket{min-height:170px;border-radius:18px;border:3px solid var(--acorn);background:color-mix(in srgb,var(--acorn) 12%,var(--panel));
+  display:flex;flex-direction:column;gap:8px;padding:10px;transition:transform .15s,background .15s}
+.basket.hover{transform:scale(1.03);background:color-mix(in srgb,var(--acorn) 30%,var(--panel))}
+.basket h3{margin:0;font-family:var(--display);font-weight:400;font-size:24px;text-align:center}
+.basket .in{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.basket .in span{font-size:30px;font-family:var(--display);animation:pop .3s}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+@media (max-width:520px){h1{font-size:26px}.tab{font-size:18px;padding:8px 12px}.msg{font-size:20px}}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>다람쥐 숲길 대모험<small>집에 가고, 겨울 준비를 하고, 도토리를 찾아요</small></h1>
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tabTrace" role="tab" aria-selected="true">선 따라가기</button>
+      <button class="tab" id="tabSort" role="tab" aria-selected="false">바구니에 담기</button>
+      <button class="tab" id="tabHide" role="tab" aria-selected="false">도토리 찾기</button>
+    </div>
+  </header>
+
+  <!-- 선 따라가기 -->
+  <section class="board" id="trace">
+    <div class="bar">
+      <div class="chips" id="levelChips" aria-label="단계"></div>
+      <div class="score"><button class="chip" id="soundBtn" aria-pressed="true">소리 켜짐</button><span id="tryCount">도전 1번째</span><span id="timer" hidden></span><span id="best" class="best" hidden></span></div>
+    </div>
+    <div class="msg" id="traceMsg">초록 출발점을 꾹 누르고, 길을 따라 집까지 가요!</div>
+    <div class="stage" id="stage">
+      <canvas id="cv" width="800" height="480" aria-label="길 따라가기 놀이판"></canvas>
+      <div class="overlay" id="winBox" hidden>
+        <div class="big" id="winTitle">도착했어요!</div>
+        <p id="winText"></p>
+        <div class="chips"><button class="btn ghost" id="againBtn">한 번 더</button><button class="btn" id="nextBtn">다음 길로</button></div>
+      </div>
+    </div>
+    <p class="tip" id="traceTip">길 밖으로 나가거나 손을 떼면 출발점부터 다시 시작해요.</p>
+  </section>
+
+  <!-- 바구니에 담기 -->
+  <section class="board" id="sort" hidden>
+    <div class="bar">
+      <div class="chips" id="setChips"></div>
+      <div class="score" id="sortScore"></div>
+    </div>
+    <div class="msg" id="sortMsg">그림 카드를 꾹 눌러서 알맞은 바구니로 옮겨요!</div>
+    <p class="fact" id="sortFact"></p>
+    <div class="pool" id="pool"></div>
+    <div class="baskets" id="baskets"></div>
+    <div class="bar" style="justify-content:center"><button class="btn ghost" id="sortReset">처음부터 다시</button><button class="btn" id="goHide" hidden>도토리 찾으러 가기</button></div>
+  </section>
+
+  <!-- 도토리 찾기 -->
+  <section class="board" id="hide" hidden>
+    <div class="keys">
+      <div class="key"><b>휠 굴리기</b> 크게 / 작게</div>
+      <div class="key"><b>왼쪽 꾹 끌기</b> 화면 옮기기</div>
+      <div class="key"><b>오른쪽 클릭</b> 깃발 꽂기</div>
+    </div>
+    <div class="bar">
+      <div class="score"><span id="hideCount">찾은 도토리 0 / 5</span><span id="zoomText">확대 1배</span></div>
+      <div class="chips"><button class="btn ghost" id="zoomReset">처음 크기로</button><button class="btn" id="hideNew">새 숲으로</button></div>
+    </div>
+    <div class="msg" id="hideMsg">숲속에 아주 작은 도토리 5개가 숨어 있어요. 휠을 굴려 크게 보세요!</div>
+    <div class="stage" id="hideStage">
+      <canvas id="hv" width="800" height="480" aria-label="도토리 찾기 숲"></canvas>
+      <div class="overlay" id="hideWin" hidden>
+        <div class="big">도토리를 모두 찾았어요!</div>
+        <p id="hideWinText"></p>
+        <button class="btn" id="hideAgain">새 숲에서 또 찾기</button>
+      </div>
+    </div>
+    <p class="tip">도토리는 너무 작아서 크게 확대해야 깃발을 꽂을 수 있어요. 버섯에 꽂으면 안 돼요!</p>
+  </section>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<script>
+(function(){
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const EMOJI='"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- 탭 ---------- */
+const tabs={trace:'tabTrace',sort:'tabSort',hide:'tabHide'};let current='trace';
+function show(which){current=which;
+  for(const k in tabs){document.getElementById(tabs[k]).setAttribute('aria-selected',k===which);document.getElementById(k).hidden=k!==which;}
+  if(which==='trace')draw();if(which==='hide')hDraw();
+}
+for(const k in tabs)document.getElementById(tabs[k]).onclick=()=>show(k);
+
+/* ---------- 선 따라가기 ---------- */
+const W=800,H=480;
+function wave(){const p=[];for(let x=90;x<=710;x+=20)p.push([x,240+130*Math.sin((x-90)/620*Math.PI*2)]);return p;}
+const LEVELS=[
+  {w:74,pts:[[90,240],[710,240]]},
+  {w:64,pts:[[90,380],[260,120],[430,380],[600,120],[710,120]]},
+  {w:56,pts:wave()},
+  {w:48,pts:[[90,80],[710,80],[710,400],[170,400],[170,200],[590,200],[590,300],[320,300]]},
+  {w:38,pts:[[80,400],[80,80],[230,80],[230,400],[380,400],[380,80],[530,80],[530,400],[680,400],[680,80]]},
+  {w:30,timer:true,intro:'길이 아주 좁고 길어졌어요! 이제 시간도 재요.',
+   pts:[[60,60],[740,60],[740,180],[60,180],[60,300],[740,300],[740,420],[60,420]]},
+  {w:36,timer:true,foe:'🦅',foeName:'매',intro:'하늘에서 매가 다람쥐를 노려요! 매가 지나갈 때까지 기다렸다 가요.',
+   pts:[[80,420],[80,80],[720,80],[720,420],[240,420],[240,220],[560,220]],
+   bees:[{c:[400,80],ax:'y',amp:70,sp:2.2,ph:0},{c:[720,250],ax:'x',amp:70,sp:2.6,ph:1},
+         {c:[480,420],ax:'y',amp:70,sp:2.4,ph:2},{c:[400,220],ax:'y',amp:60,sp:2.0,ph:3}]},
+  {w:29,timer:true,foe:'🐍',foeName:'뱀',intro:'마지막 도전! 아주 좁은 길에 뱀이 스르륵 지나다녀요!',
+   pts:[[60,420],[160,60],[260,420],[360,60],[460,420],[560,60],[660,420],[740,240]],
+   bees:[{c:[210,240],ax:'x',amp:45,sp:2.9,ph:0},{c:[410,240],ax:'x',amp:45,sp:3.1,ph:1.5},
+         {c:[610,240],ax:'x',amp:45,sp:3.3,ph:3},{c:[310,240],ax:'x',amp:40,sp:2.6,ph:2.2}]}
+];
+let lv=0,tracing=false,trail=[],tries=1,won=false,failFlash=0,t0=0,elapsed=0;
+let done=new Set();
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const msg=document.getElementById('traceMsg'),stage=document.getElementById('stage');
+const chipsBox=document.getElementById('levelChips'),timerEl=document.getElementById('timer'),bestEl=document.getElementById('best');
+const startMsg='초록 출발점을 꾹 누르고, 길을 따라 집까지 가요!';
+
+function buildChips(){
+  chipsBox.innerHTML='';
+  LEVELS.forEach((L,i)=>{const b=document.createElement('button');
+    b.className='chip'+(L.timer?' hard':'')+(i===lv?' on':'')+(done.has(i)?' done':'');
+    b.id='lv'+i;b.textContent=(i+1)+'단계';b.onclick=()=>setLevel(i);chipsBox.appendChild(b);});
+}
+function bestOf(i){const v=parseFloat(store.get('mouse-best-'+i));return isNaN(v)?null:v;}
+function showTimer(){
+  const L=LEVELS[lv];timerEl.hidden=!L.timer;bestEl.hidden=!L.timer;
+  if(L.timer){timerEl.textContent='시간 '+elapsed.toFixed(1)+'초';const b=bestOf(lv);bestEl.textContent=b?'최고 기록 '+b.toFixed(1)+'초':'최고 기록 없음';}
+}
+function setLevel(i){lv=i;tries=1;reset(true);buildChips();}
+function reset(fresh){
+  if(typeof clearFx==='function'){clearFx();winToken++;}tracing=false;trail=[];won=false;elapsed=0;document.getElementById('winBox').hidden=true;
+  document.getElementById('tryCount').textContent='도전 '+tries+'번째';
+  if(fresh){msg.className='msg';msg.textContent=LEVELS[lv].intro||startMsg;}
+  document.getElementById('traceTip').textContent=LEVELS[lv].bees?
+    '길 밖으로 나가거나, 손을 떼거나, 천적('+LEVELS[lv].foeName+')을 만나면 출발점부터 다시 시작해요.':'길 밖으로 나가거나 손을 떼면 출발점부터 다시 시작해요.';
+  showTimer();draw();
+}
+function distSeg(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1];const l=dx*dx+dy*dy;let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;
+  t=Math.max(0,Math.min(1,t));return Math.hypot(p[0]-(a[0]+t*dx),p[1]-(a[1]+t*dy));}
+function distPath(p){const P=LEVELS[lv].pts;let m=1e9;for(let i=0;i<P.length-1;i++)m=Math.min(m,distSeg(p,P[i],P[i+1]));return m;}
+function pos(e,c){const r=c.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+function beePos(b,t){const o=b.amp*Math.sin(t/1000*b.sp+b.ph);return b.ax==='x'?[b.c[0]+o,b.c[1]]:[b.c[0],b.c[1]+o];}
+function hitBee(q,t){const B=LEVELS[lv].bees;if(!B)return false;for(const b of B){const p=beePos(b,t);if(Math.hypot(q[0]-p[0],q[1]-p[1])<17)return true;}return false;}
+const R=()=>Math.max(LEVELS[lv].timer?20:26,LEVELS[lv].w*.55);
+
+function draw(){
+  const L=LEVELS[lv],P=L.pts,now=performance.now();ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=css('--grass');ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=css('--line');for(let i=0;i<60;i++){ctx.fillRect((i*137)%W,(i*89)%H,3,3);}
+  ctx.lineCap='round';ctx.lineJoin='round';
+  const path=()=>{ctx.beginPath();ctx.moveTo(P[0][0],P[0][1]);for(const q of P.slice(1))ctx.lineTo(q[0],q[1]);};
+  path();ctx.strokeStyle=failFlash?css('--bad'):css('--road-edge');ctx.lineWidth=L.w+8;ctx.stroke();
+  path();ctx.strokeStyle=css('--road');ctx.lineWidth=L.w;ctx.stroke();
+  if(trail.length>1){ctx.beginPath();ctx.moveTo(trail[0][0],trail[0][1]);for(const q of trail)ctx.lineTo(q[0],q[1]);
+    ctx.strokeStyle=css('--leaf');ctx.lineWidth=Math.max(8,L.w*.32);ctx.stroke();}
+  const s=P[0],g=P[P.length-1],r=R();
+  ctx.beginPath();ctx.arc(s[0],s[1],r,0,Math.PI*2);ctx.fillStyle=css('--leaf');ctx.fill();
+  ctx.fillStyle=css('--leaf-ink');ctx.font=(r<24?15:20)+'px Jua, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('출발',s[0],s[1]+1);
+  ctx.beginPath();ctx.arc(g[0],g[1],r,0,Math.PI*2);ctx.fillStyle=css('--acorn');ctx.fill();
+  ctx.font=(r*1.15)+'px '+EMOJI;ctx.fillText('🏠',g[0],g[1]+2);
+  if(L.bees){ctx.font='34px '+EMOJI;for(const b of L.bees){const p=beePos(b,now);ctx.fillText(L.foe,p[0],p[1]);}}
+  const me=trail.length?trail[trail.length-1]:null;
+  if(me){ctx.font=(L.w<32?30:38)+'px '+EMOJI;ctx.fillText('🐿️',me[0],me[1]-4);}
+}
+function loop(){
+  if(current==='trace'){
+    const L=LEVELS[lv];
+    if(tracing&&L.timer){elapsed=(performance.now()-t0)/1000;showTimer();}
+    if(tracing&&L.bees&&hitBee(trail[trail.length-1],performance.now())){fail('앗! '+LEVELS[lv].foeName+'에게 잡힐 뻔했어요. 출발점부터 다시!');}
+    if(L.bees||tracing)draw();
+  }
+  requestAnimationFrame(loop);
+}
+function fail(text){
+  tracing=false;trail=[];tries++;elapsed=0;failFlash=1;msg.className='msg bad';msg.textContent=text;
+  document.getElementById('tryCount').textContent='도전 '+tries+'번째';showTimer();
+  stage.classList.remove('shake');void stage.offsetWidth;stage.classList.add('shake');
+  draw();setTimeout(()=>{failFlash=0;draw();},450);
+}
+/* 단계 성공 축하: 집에서 도토리가 잠깐 톡 터졌다 사라짐 */
+const fx=document.getElementById('fx'),fctx=fx.getContext('2d');let parts=[],fxOn=false,fxStart=0,winToken=0;
+const FX_MS=900;
+const sprite=document.createElement('canvas');sprite.width=sprite.height=48;
+(function(){const c=sprite.getContext('2d');c.textAlign='center';c.textBaseline='middle';c.font='36px '+EMOJI;c.fillText('🌰',24,26);})();
+function clearFx(){parts=[];fctx.setTransform(1,0,0,1,0,0);fctx.clearRect(0,0,fx.width,fx.height);}
+/* 뾰로롱 소리 (Web Audio, 파일 없이 만듦) */
+let actx=null,soundOn=true;
+const soundBtn=document.getElementById('soundBtn');
+soundBtn.onclick=()=>{soundOn=!soundOn;soundBtn.setAttribute('aria-pressed',soundOn);soundBtn.textContent=soundOn?'소리 켜짐':'소리 꺼짐';};
+function unlockAudio(){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();}catch(e){}}
+document.addEventListener('pointerdown',unlockAudio);
+function sparkle(){
+  if(!soundOn||!actx)return;
+  try{
+    const t0=actx.currentTime+0.02,notes=[1046.5,1318.5,1568,2093,2637];
+    const master=actx.createGain();master.gain.value=0.22;master.connect(actx.destination);
+    notes.forEach((f,i)=>{
+      const t=t0+i*0.07;
+      [['sine',1],['triangle',2]].forEach(([type,mul])=>{
+        const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.setValueAtTime(f*mul,t);
+        const peak=mul===1?0.5:0.12;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.5);
+      });
+    });
+  }catch(e){}
+}
+function celebrate(){
+  const dpr=window.devicePixelRatio||1;fx.width=innerWidth*dpr;fx.height=innerHeight*dpr;fctx.setTransform(dpr,0,0,dpr,0,0);
+  const r=stage.getBoundingClientRect(),P=LEVELS[lv].pts,g=P[P.length-1];
+  const gx=r.left+g[0]*r.width/W,gy=r.top+g[1]*r.height/H;
+  const n=matchMedia('(prefers-reduced-motion: reduce)').matches?5:12;parts=[];
+  for(let i=0;i<n;i++){const ang=-Math.PI/2+(i/(n-1)-.5)*Math.PI*1.4,sp=3+Math.random()*3;
+    parts.push({x:gx,y:gy,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,s:20+Math.random()*10,a:Math.random()*6.28,va:(Math.random()-.5)*.3});}
+  sparkle();fxStart=performance.now();if(!fxOn){fxOn=true;requestAnimationFrame(fxLoop);}
+}
+function fxLoop(now){
+  const vw=innerWidth,vh=innerHeight,t=(now-fxStart)/FX_MS;fctx.clearRect(0,0,vw,vh);
+  if(t>=1||!parts.length){fxOn=false;clearFx();return;}
+  fctx.globalAlpha=t<.6?1:1-(t-.6)/.4;
+  for(const p of parts){p.vy+=0.18;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;
+    fctx.save();fctx.translate(p.x,p.y);fctx.rotate(p.a);fctx.drawImage(sprite,-p.s/2,-p.s/2,p.s,p.s);fctx.restore();}
+  fctx.globalAlpha=1;requestAnimationFrame(fxLoop);
+}
+function win(){
+  tracing=false;won=true;celebrate();done.add(lv);buildChips();msg.className='msg good';msg.textContent='우와! 다람쥐가 집에 도착했어요!';
+  const L=LEVELS[lv],last=lv===LEVELS.length-1;
+  let text=tries+'번 만에 성공했어요.'+(tries===1?' 한 번에 해냈네요!':'');
+  if(L.timer){elapsed=(performance.now()-t0)/1000;const b=bestOf(lv);
+    text='걸린 시간 '+elapsed.toFixed(1)+'초. ';
+    if(b===null||elapsed<b){store.set('mouse-best-'+lv,elapsed.toFixed(1));text+='새로운 최고 기록이에요!';}
+    else text+='최고 기록은 '+b.toFixed(1)+'초예요. 한 번 더 도전해 볼까요?';
+    showTimer();}
+  document.getElementById('winTitle').textContent=last?'모든 길 성공!':'도착했어요!';
+  document.getElementById('winText').textContent=text;
+  document.getElementById('nextBtn').hidden=last;
+  document.getElementById('nextBtn').textContent=lv===4?'도전 단계로':'다음 길로';
+  const token=++winToken;
+  setTimeout(()=>{if(token===winToken&&won)document.getElementById('winBox').hidden=false;},FX_MS);
+}
+cv.addEventListener('pointerdown',e=>{
+  if(won||e.button!==0)return;const p=pos(e,cv),s=LEVELS[lv].pts[0];
+  if(Math.hypot(p[0]-s[0],p[1]-s[1])<=R()+6){tracing=true;trail=[p];t0=performance.now();elapsed=0;cv.setPointerCapture(e.pointerId);
+    msg.className='msg';msg.textContent='좋아요! 손을 떼지 말고 천천히~';draw();}
+  else{msg.className='msg';msg.textContent='초록색 출발점을 먼저 눌러요!';}
+});
+cv.addEventListener('pointermove',e=>{
+  if(!tracing)return;const L=LEVELS[lv],p=pos(e,cv),last=trail[trail.length-1],now=performance.now();
+  const steps=Math.ceil(Math.hypot(p[0]-last[0],p[1]-last[1])/4);
+  for(let i=1;i<=steps;i++){const q=[last[0]+(p[0]-last[0])*i/steps,last[1]+(p[1]-last[1])*i/steps];
+    if(distPath(q)>L.w/2+3){fail('앗! 길 밖으로 나갔어요. 출발점부터 다시!');return;}
+    if(hitBee(q,now)){fail('앗! '+LEVELS[lv].foeName+'에게 잡힐 뻔했어요. 출발점부터 다시!');return;}
+    trail.push(q);const g=L.pts[L.pts.length-1];
+    if(Math.hypot(q[0]-g[0],q[1]-g[1])<R()){draw();win();return;}}
+  draw();
+});
+cv.addEventListener('pointerup',()=>{if(tracing)fail('손을 떼면 안 돼요! 출발점부터 다시!');});
+cv.addEventListener('pointercancel',()=>{if(tracing)fail('다시 출발점부터 해 볼까요?');});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+document.getElementById('againBtn').onclick=()=>{tries=1;reset(true);};
+document.getElementById('nextBtn').onclick=()=>setLevel(Math.min(lv+1,LEVELS.length-1));
+const redraw=()=>{draw();hDraw();};
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',redraw);
+new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- 바구니에 담기: 다람쥐의 겨울 준비 ---------- */
+const SETS=[
+  {title:'1. 집 꾸미기',bins:['굴에 가져가요','필요 없어요'],
+   intro:'겨울잠 잘 굴을 꾸며요. 굴에 가져갈 것만 골라 주세요!',items:[
+    ['🌰','도토리',0,'도토리는 굴 속 창고에 모아 둬요.'],
+    ['🍂','낙엽',0,'낙엽을 깔면 굴이 포근해져요.'],
+    ['🌾','마른 풀',0,'마른 풀로 폭신한 잠자리를 만들어요.'],
+    ['🍁','나뭇잎',0,'나뭇잎은 겨울잠 이불이 돼요.'],
+    ['🛍️','비닐봉지',1,'비닐은 숲에 버리면 안 되는 쓰레기예요.'],
+    ['🥫','깡통',1,'깡통은 날카로워서 다칠 수 있어요.'],
+    ['🧸','곰 인형',1,'인형은 다람쥐에게 필요 없어요.'],
+    ['🎈','풍선',1,'풍선 조각은 동물에게 위험한 쓰레기예요.']]},
+  {title:'2. 먹이 모으기',bins:['먹어요','먹으면 안 돼요'],
+   intro:'겨울에 먹을 먹이를 모아요. 다람쥐가 먹는 것만 골라요!',items:[
+    ['🌰','도토리',0,'도토리는 다람쥐가 가장 좋아하는 먹이예요.'],
+    ['🌲','잣',0,'잣나무 열매인 잣도 잘 먹어요.'],
+    ['🌻','해바라기씨',0,'다람쥐는 여러 가지 씨앗을 먹어요.'],
+    ['🍇','산머루',0,'숲속 나무 열매도 다람쥐의 먹이예요.'],
+    ['🍪','과자',1,'과자는 짜고 달아서 다람쥐 배가 아파요.'],
+    ['🍬','사탕',1,'사탕은 너무 달아서 이가 상해요.'],
+    ['🍫','초콜릿',1,'초콜릿은 동물에게 위험한 음식이에요.'],
+    ['🍟','감자튀김',1,'짜고 기름진 음식은 먹으면 안 돼요.']]},
+  {title:'3. 친구일까, 천적일까?',bins:['숲속 친구','조심해!'],
+   intro:'숲에서 만난 동물이에요. 친구일까요, 조심해야 할까요?',items:[
+    ['🐿️','청설모',0,'청설모는 다람쥐보다 크고 겨울잠을 안 자요.'],
+    ['🐿️','하늘다람쥐',0,'하늘다람쥐는 천연기념물이에요. 밤에 날듯이 미끄러져요.'],
+    ['🐰','토끼',0,'토끼도 풀과 열매를 먹는 숲속 이웃이에요.'],
+    ['🦌','사슴',0,'사슴은 풀을 먹어서 다람쥐를 해치지 않아요.'],
+    ['🦅','매',1,'매는 하늘에서 다람쥐를 노려요.'],
+    ['🦉','올빼미',1,'올빼미는 밤에 사냥하는 다람쥐의 천적이에요.'],
+    ['🐍','뱀',1,'뱀은 다람쥐 굴에 몰래 들어오기도 해요.'],
+    ['🐈','들고양이',1,'들고양이도 다람쥐를 사냥할 수 있어요.']]},
+  {title:'4. 받침 찾기',bins:['받침 있는 말','받침 없는 말'],
+   intro:'다람쥐와 관련된 말이에요. 글자 아래 받침이 있는지 잘 봐요!',items:[
+    ['밤','🌰',0,'밤: ㅁ 받침이 있어요.'],['잣','🌲',0,'잣: ㅅ 받침이 있어요.'],
+    ['굴','🕳️',0,'굴: ㄹ 받침이 있어요.'],['숲','🌳',0,'숲: ㅍ 받침이 있어요.'],
+    ['뱀','🐍',0,'뱀: ㅁ 받침이 있어요.'],['볼','😊',0,'볼: ㄹ 받침이 있어요. 다람쥐는 볼주머니에 도토리를 넣어요.'],
+    ['매','🦅',1,'매: 받침이 없어요.'],['나무','🌳',1,'나무: 두 글자 모두 받침이 없어요.'],
+    ['꼬리','🐿️',1,'꼬리: 받침이 없어요.'],['도토리','🌰',1,'도토리: 세 글자 모두 받침이 없어요.'],
+    ['다리','🦵',1,'다리: 받침이 없어요.'],['소나무','🌲',1,'소나무: 받침이 없어요.']]}
+];
+let setIdx=0,left=0,wrong=0,right=0;const setDone=new Set();
+const pool=document.getElementById('pool'),bk=document.getElementById('baskets'),sMsg=document.getElementById('sortMsg');
+const sFact=document.getElementById('sortFact'),goHide=document.getElementById('goHide');
+function setChips(){const box=document.getElementById('setChips');box.innerHTML='';
+  SETS.forEach((S,i)=>{const b=document.createElement('button');b.className='chip'+(i===setIdx?' on':'')+(setDone.has(i)?' done':'');b.id='set'+i;
+    b.textContent=S.title;b.onclick=()=>{setIdx=i;setChips();startSort();};box.appendChild(b);});}
+function score(){document.getElementById('sortScore').textContent='담은 카드 '+right+' · 남은 카드 '+left;}
+function shuffle(a){return a.slice().sort(()=>Math.random()-.5);}
+function startSort(){
+  const S=SETS[setIdx];pool.innerHTML='';bk.innerHTML='';right=0;wrong=0;goHide.hidden=true;
+  S.bins.forEach((n,i)=>{const d=document.createElement('div');d.className='basket';d.dataset.bin=i;
+    d.innerHTML='<h3>'+n+'</h3><div class="in"></div>';bk.appendChild(d);});
+  const items=shuffle(S.bins.flatMap((_,i)=>shuffle(S.items.filter(it=>it[2]===i)).slice(0,4)));
+  left=items.length;
+  items.forEach(it=>{const c=document.createElement('div');c.className='card';c.dataset.bin=it[2];c.dataset.e=it[0];c.dataset.f=it[3];
+    const word=/[가-힣]/.test(it[0]);
+    c.innerHTML='<span class="e"'+(word?' style="font-size:'+(it[0].length>2?24:30)+'px"':'')+'>'+it[0]+'</span><span class="n">'+it[1]+'</span>';
+    c.addEventListener('pointerdown',grab);pool.appendChild(c);});
+  sMsg.className='msg';sMsg.textContent=S.intro;
+  sFact.textContent='겨울이 오기 전에 다람쥐를 도와 겨울 준비를 해요. 카드를 꾹 눌러 바구니로 옮겨요!';score();
+}
+let drag=null;
+function grab(e){
+  if(e.button!==0)return;
+  const card=e.currentTarget,r=card.getBoundingClientRect();
+  const fly=card.cloneNode(true);fly.classList.add('drag');document.body.appendChild(fly);
+  card.classList.add('ghost');
+  drag={card,fly,dx:e.clientX-r.left,dy:e.clientY-r.top};
+  move(e);window.addEventListener('pointermove',move);window.addEventListener('pointerup',drop);window.addEventListener('pointercancel',drop);
+  e.preventDefault();
+}
+function binAt(x,y){const el=document.elementFromPoint(x,y);return el?el.closest('.basket'):null;}
+function move(e){if(!drag)return;drag.fly.style.left=(e.clientX-drag.dx)+'px';drag.fly.style.top=(e.clientY-drag.dy)+'px';
+  document.querySelectorAll('.basket').forEach(b=>b.classList.remove('hover'));const b=binAt(e.clientX,e.clientY);if(b)b.classList.add('hover');}
+function drop(e){
+  if(!drag)return;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',drop);window.removeEventListener('pointercancel',drop);
+  const{card,fly}=drag;drag=null;fly.remove();document.querySelectorAll('.basket').forEach(b=>b.classList.remove('hover'));
+  const b=binAt(e.clientX,e.clientY);
+  card.classList.remove('ghost');
+  if(b&&b.dataset.bin===card.dataset.bin){
+    const s=document.createElement('span');s.textContent=card.dataset.e;b.querySelector('.in').appendChild(s);
+    sFact.textContent=card.dataset.f;
+    card.remove();left--;right++;score();
+    if(left===0){
+      setDone.add(setIdx);setChips();
+      const all=setDone.size===SETS.length;
+      sMsg.className='msg good';
+      sMsg.textContent=all?'겨울 준비 완료! 다람쥐가 정말 고마워해요!':
+        (wrong===0?'모두 정답! 한 번도 안 틀렸어요!':'모두 담았어요! 다시 생각한 건 '+wrong+'번이에요.');
+      if(all){sFact.textContent='이제 숲에 숨겨 둔 도토리를 찾으러 가요!';goHide.hidden=false;}
+      else{const nx=SETS.findIndex((_,i)=>!setDone.has(i));sFact.textContent+=' 다음은 「'+SETS[nx].title+'」 차례예요.';}
+    }
+    else{sMsg.className='msg good';sMsg.textContent=['딩동댕!','맞았어요!','잘했어요!'][right%3];}
+  }else if(b){wrong++;card.classList.remove('back');void card.offsetWidth;card.classList.add('back');
+    sMsg.className='msg bad';sMsg.textContent='음… 다른 바구니일 것 같아요. 다시 해 봐요!';}
+  else{sMsg.className='msg';sMsg.textContent='바구니 위에서 손을 떼야 들어가요!';}
+}
+document.getElementById('sortReset').onclick=startSort;
+goHide.onclick=()=>show('hide');
+
+/* ---------- 도토리 찾기 (휠 + 오른쪽 클릭) ---------- */
+const hv=document.getElementById('hv'),hctx=hv.getContext('2d'),hMsg=document.getElementById('hideMsg');
+const NEED=2.5,MAXZ=6;
+let sc=1,ox=0,oy=0,deco=[],targets=[],fakes=[],flags=[],found=0,wrongFlags=0,pan=null;
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function newForest(){
+  const r=rng(Math.floor(Math.random()*1e9));deco=[];targets=[];fakes=[];flags=[];found=0;wrongFlags=0;
+  const leaves=['🍂','🍁','🌿','🍃','🌾'];
+  for(let i=0;i<230;i++)deco.push({x:20+r()*760,y:20+r()*440,s:14+r()*16,e:leaves[Math.floor(r()*leaves.length)],a:r()*6.28});
+  for(let i=0;i<6;i++)deco.push({x:60+r()*680,y:60+r()*360,s:46+r()*20,e:'🌳',a:0});
+  const place=list=>{let p;do{p={x:40+r()*720,y:40+r()*400};}while([...targets,...fakes].some(o=>Math.hypot(o.x-p.x,o.y-p.y)<70));list.push(p);};
+  for(let i=0;i<5;i++)place(targets);for(let i=0;i<5;i++)place(fakes);
+  sc=1;ox=0;oy=0;document.getElementById('hideWin').hidden=true;
+  hMsg.className='msg';hMsg.textContent='숲속에 아주 작은 도토리 5개가 숨어 있어요. 휠을 굴려 크게 보세요!';
+  hInfo();hDraw();
+}
+function hInfo(){document.getElementById('hideCount').textContent='찾은 도토리 '+found+' / 5';
+  document.getElementById('zoomText').textContent='확대 '+(Math.round(sc*10)/10)+'배';}
+function clampView(){sc=Math.max(1,Math.min(MAXZ,sc));ox=Math.max(0,Math.min(W-W/sc,ox));oy=Math.max(0,Math.min(H-H/sc,oy));}
+function hDraw(){
+  if(!hctx)return;hctx.setTransform(1,0,0,1,0,0);hctx.fillStyle=css('--forest');hctx.fillRect(0,0,W,H);
+  hctx.setTransform(sc,0,0,sc,-ox*sc,-oy*sc);hctx.textAlign='center';hctx.textBaseline='middle';
+  hctx.fillStyle=css('--grass');for(let i=0;i<80;i++){hctx.fillRect((i*173)%W,(i*97)%H,6,6);}
+  for(const d of deco){hctx.save();hctx.translate(d.x,d.y);hctx.rotate(d.a);hctx.font=d.s+'px '+EMOJI;hctx.fillText(d.e,0,0);hctx.restore();}
+  hctx.font='9px '+EMOJI;
+  for(const f of fakes)hctx.fillText('🍄',f.x,f.y);
+  for(const t of targets)hctx.fillText('🌰',t.x,t.y);
+  hctx.font='14px '+EMOJI;for(const f of flags)hctx.fillText('🚩',f.x+3,f.y-9);
+  hctx.setTransform(1,0,0,1,0,0);
+}
+hv.addEventListener('wheel',e=>{
+  e.preventDefault();const p=pos(e,hv),wx=p[0]/sc+ox,wy=p[1]/sc+oy;
+  sc*=e.deltaY<0?1.2:1/1.2;sc=Math.max(1,Math.min(MAXZ,sc));ox=wx-p[0]/sc;oy=wy-p[1]/sc;clampView();hInfo();hDraw();
+  if(sc>=NEED&&hMsg.dataset.z!=='1'){hMsg.dataset.z='1';hMsg.className='msg good';hMsg.textContent='크게 보여요! 도토리를 찾으면 오른쪽 클릭!';}
+},{passive:false});
+hv.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;pan={x:e.clientX,y:e.clientY,ox,oy,moved:false};hv.setPointerCapture(e.pointerId);hv.classList.add('panning');
+});
+hv.addEventListener('pointermove',e=>{
+  if(!pan)return;const r=hv.getBoundingClientRect(),k=W/r.width;
+  const dx=(e.clientX-pan.x)*k,dy=(e.clientY-pan.y)*k;if(Math.abs(dx)+Math.abs(dy)>4)pan.moved=true;
+  ox=pan.ox-dx/sc;oy=pan.oy-dy/sc;clampView();hDraw();
+});
+hv.addEventListener('pointerup',e=>{
+  if(!pan)return;const moved=pan.moved;pan=null;hv.classList.remove('panning');
+  if(!moved){const p=pos(e,hv),w=[p[0]/sc+ox,p[1]/sc+oy];
+    if(targets.some(t=>Math.hypot(t.x-w[0],t.y-w[1])<10)){hMsg.className='msg';hMsg.textContent='찾았네요! 왼쪽 말고 오른쪽 버튼으로 깃발을 꽂아요.';}
+    else if(sc===1&&e.button===0){hMsg.className='msg';hMsg.textContent='화면을 옮기려면 확대한 다음 꾹 눌러 끌어요!';}}
+});
+hv.addEventListener('pointercancel',()=>{pan=null;hv.classList.remove('panning');});
+hv.addEventListener('contextmenu',e=>{
+  e.preventDefault();const p=pos(e,hv),w=[p[0]/sc+ox,p[1]/sc+oy];
+  const near=list=>list.find(o=>Math.hypot(o.x-w[0],o.y-w[1])<10);
+  const t=near(targets),f=near(fakes);
+  if(t&&flags.includes(t)){hMsg.className='msg';hMsg.textContent='여기는 벌써 깃발을 꽂았어요!';return;}
+  if((t||f)&&sc<NEED){hMsg.className='msg bad';hMsg.textContent='너무 작아서 잘 안 보여요. 휠을 더 굴려 크게 본 다음 꽂아요!';return;}
+  if(t){flags.push(t);found++;hInfo();hDraw();
+    if(found===5){document.getElementById('hideWinText').textContent=wrongFlags===0?'한 번도 안 틀리고 다 찾았어요!':'버섯을 '+wrongFlags+'번 헷갈렸지만 끝까지 찾았어요!';
+      document.getElementById('hideWin').hidden=false;hMsg.className='msg good';hMsg.textContent='모두 찾았어요!';}
+    else{hMsg.className='msg good';hMsg.textContent='깃발 꽂기 성공! 도토리가 '+(5-found)+'개 남았어요.';}}
+  else if(f){wrongFlags++;hMsg.className='msg bad';hMsg.textContent='그건 버섯이에요! 도토리를 찾아봐요.';}
+  else{hMsg.className='msg';hMsg.textContent='여기에는 도토리가 없어요.';}
+});
+document.getElementById('zoomReset').onclick=()=>{sc=1;ox=0;oy=0;hInfo();hDraw();};
+document.getElementById('hideNew').onclick=newForest;
+document.getElementById('hideAgain').onclick=newForest;
+
+buildChips();reset(true);setChips();startSort();newForest();requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
